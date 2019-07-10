@@ -28,16 +28,16 @@ import static com.adrienben.demo.kstreamconnectionsaggregationexample.transforme
 @EnableKafkaStreams
 public class StreamConfig {
 
-	private static final String PRODUCT_DETAILS_TOPIC = "product_details";
-	private static final String PRICES_TOPIC = "prices";
-	private static final String SKU_DETAILS_TOPIC = "sku_details";
-	private static final String OFFER_DETAILS_TOPIC = "offer_details";
+	public static final String PRODUCT_DETAILS_TOPIC = "product_details";
+	public static final String PRICES_TOPIC = "prices";
+	public static final String SKU_DETAILS_TOPIC = "sku_details";
+	public static final String OFFER_DETAILS_TOPIC = "offer_details";
 
-	private static final String PRICES_BY_PRODUCT_ID_REKEY_TOPIC = "prices_by_product_id_rekey";
-	private static final String SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC = "sku_details_by_product_id_rekey";
-	private static final String OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC = "offer_details_by_product_id_rekey";
+	public static final String PRICES_BY_PRODUCT_ID_REKEY_TOPIC = "prices_by_product_id_rekey";
+	public static final String SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC = "sku_details_by_product_id_rekey";
+	public static final String OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC = "offer_details_by_product_id_rekey";
 
-	private static final String PRODUCTS_TOPIC = "products";
+	public static final String PRODUCTS_TOPIC = "products";
 
 	private ObjectMapper mapper;
 
