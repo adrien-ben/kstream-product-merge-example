@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: kstream-product-merge-example
+  kafka:
+    streams:
+      state-dir: ./target/kstream-statestore
+      properties:
+        commit.interval.ms: 100
+        default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+
+logging:
+  level:
+    org.springframework.kafka: DEBUG
