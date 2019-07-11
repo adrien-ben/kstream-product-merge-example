@@ -1,5 +1,7 @@
 # KStream product merge example
 
+[![Build Status](https://travis-ci.com/adrien-ben/kstream-product-merge-example.svg?branch=master)](https://travis-ci.com/adrien-ben/kstream-product-merge-example)
+
 In this example we are going to merge product information coming from multiple topics.
 Only product with the minimal required information (id, name and brand) will be outputted.
 
