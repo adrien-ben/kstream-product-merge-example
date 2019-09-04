@@ -1,13 +1,17 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Offer;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Product;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Sku;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetailsAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.PriceAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetailsAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetailsAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.OfferAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.ProductAvro;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.SkuAvro;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -19,13 +23,15 @@ import org.apache.kafka.streams.TopologyTestDriver;
 import org.apache.kafka.streams.test.ConsumerRecordFactory;
 import org.apache.kafka.streams.test.OutputVerifier;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
+import java.io.IOException;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Properties;
 
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.OFFER_DETAILS_TOPIC;
@@ -40,9 +46,25 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @Slf4j
 class StreamConfigTest {
 
-	private static ObjectMapper mapper = new JacksonConfig().objectMapper();
+	private static ObjectMapper mapper;
+	private static SpecificAvroSerde<ProductDetailsAvro> productDetailsAvroSerde;
+	private static SpecificAvroSerde<SkuDetailsAvro> skuDetailsAvroSerde;
+	private static SpecificAvroSerde<OfferDetailsAvro> offerDetailsAvroSerde;
+	private static SpecificAvroSerde<PriceAvro> priceAvroSerde;
+	private static SpecificAvroSerde<ProductAvro> productAvroSerde;
 
 	private TopologyTestDriver topologyTestDriver;
+
+	@BeforeAll
+	static void beforeAll() throws IOException, RestClientException {
+		mapper = new JacksonConfig().objectMapper();
+		var schemaRegistryClient = Optional.of(createSchemaRegistryClient());
+		productDetailsAvroSerde = new AvroConfig().specificAvroSerde("", schemaRegistryClient);
+		skuDetailsAvroSerde = new AvroConfig().specificAvroSerde("", schemaRegistryClient);
+		offerDetailsAvroSerde = new AvroConfig().specificAvroSerde("", schemaRegistryClient);
+		priceAvroSerde = new AvroConfig().specificAvroSerde("", schemaRegistryClient);
+		productAvroSerde = new AvroConfig().specificAvroSerde("", schemaRegistryClient);
+	}
 
 	@BeforeEach
 	void setup() {
@@ -61,13 +83,13 @@ class StreamConfigTest {
 	@Test
 	@DisplayName("It should only output product when complete")
 	void productCompleteness() {
-		var productDetailsFactory = new ConsumerRecordFactory<>(PRODUCT_DETAILS_TOPIC, new StringSerializer(), new JsonSerializer<ProductDetails>());
-		var skuDetailsFactory = new ConsumerRecordFactory<>(SKU_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<SkuDetails>());
-		var offerDetailsFactory = new ConsumerRecordFactory<>(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<OfferDetails>());
-		var priceFactory = new ConsumerRecordFactory<>(PRICES_TOPIC, new ByteArraySerializer(), new JsonSerializer<Price>());
+		var productDetailsFactory = new ConsumerRecordFactory<>(PRODUCT_DETAILS_TOPIC, new StringSerializer(), productDetailsAvroSerde.serializer());
+		var skuDetailsFactory = new ConsumerRecordFactory<>(SKU_DETAILS_TOPIC, new ByteArraySerializer(), skuDetailsAvroSerde.serializer());
+		var offerDetailsFactory = new ConsumerRecordFactory<>(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), offerDetailsAvroSerde.serializer());
+		var priceFactory = new ConsumerRecordFactory<>(PRICES_TOPIC, new ByteArraySerializer(), priceAvroSerde.serializer());
 
 		// Send a price
-		var price = new Price(
+		var price = new PriceAvro(
 				"O1S1P1",
 				"P1",
 				"S1P1",
@@ -76,7 +98,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka(topologyTestDriver);
 
 		// Send offer details
-		var offerDetails = new OfferDetails(
+		var offerDetails = new OfferDetailsAvro(
 				"O1S1P1",
 				"P1",
 				"S1P1",
@@ -86,7 +108,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka(topologyTestDriver);
 
 		// Send sku details
-		var skuDetails = new SkuDetails(
+		var skuDetails = new SkuDetailsAvro(
 				"S1P1",
 				"P1",
 				"Blue wonderful thing",
@@ -95,23 +117,23 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka(topologyTestDriver);
 
 		// Send product details
-		var productDetails = new ProductDetails(
+		var productDetails = new ProductDetailsAvro(
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys");
 		topologyTestDriver.pipeInput(productDetailsFactory.create(PRODUCT_DETAILS_TOPIC, "P1", productDetails));
-		var product = topologyTestDriver.readOutput(PRODUCTS_TOPIC, new StringDeserializer(), createJsonDeserializer(Product.class));
+		var product = topologyTestDriver.readOutput(PRODUCTS_TOPIC, new StringDeserializer(), productAvroSerde.deserializer());
 
-		var expectedProduct = new Product(
+		var expectedProduct = new ProductAvro(
 				"P1",
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys",
-				Collections.singletonList(new Sku(
+				Collections.singletonList(new SkuAvro(
 						"S1P1",
 						"Blue wonderful thing",
 						"That's a wonderful thing, trust me..., and this one is blue !",
-						Collections.singletonList(new Offer(
+						Collections.singletonList(new OfferAvro(
 								"O1S1P1",
 								"Refurbished blue wonderful thing",
 								"That's a wonderful thing, trust me..., and this one is blue ! It should work too.",
@@ -130,8 +152,24 @@ class StreamConfigTest {
 		return new JsonDeserializer<>(tClass, mapper, false);
 	}
 
+	private static SchemaRegistryClient createSchemaRegistryClient() throws IOException, RestClientException {
+		var client = new MockSchemaRegistryClient();
+		client.register(PRODUCT_DETAILS_TOPIC + "-value", ProductDetailsAvro.SCHEMA$);
+		client.register(SKU_DETAILS_TOPIC + "-value", SkuDetailsAvro.SCHEMA$);
+		client.register(OFFER_DETAILS_TOPIC + "-value", OfferDetailsAvro.SCHEMA$);
+		client.register(PRICES_TOPIC + "-value", PriceAvro.SCHEMA$);
+		client.register(PRODUCTS_TOPIC + "-value", ProductAvro.SCHEMA$);
+		return client;
+	}
+
 	private static TopologyTestDriver buildTopologyTestDriver() {
-		var streamConfig = new StreamConfig(mapper);
+		var streamConfig = new StreamConfig(
+				productDetailsAvroSerde,
+				skuDetailsAvroSerde,
+				offerDetailsAvroSerde,
+				priceAvroSerde,
+				productAvroSerde,
+				mapper);
 
 		var streamsBuilder = new StreamsBuilder();
 		streamConfig.kStream(streamsBuilder);

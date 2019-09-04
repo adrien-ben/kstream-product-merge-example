@@ -13,4 +13,13 @@ public class OfferDetails {
 	private String skuId;
 	private String name;
 	private String description;
+
+	public static OfferDetails fromAvro(OfferDetailsAvro offerDetailsAvro) {
+		return new OfferDetails(
+				offerDetailsAvro.getOfferId(),
+				offerDetailsAvro.getProductId(),
+				offerDetailsAvro.getSkuId(),
+				offerDetailsAvro.getName(),
+				offerDetailsAvro.getDescription());
+	}
 }

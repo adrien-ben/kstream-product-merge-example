@@ -12,4 +12,12 @@ public class Price {
 	private String productId;
 	private String skuId;
 	private Float amount;
+
+	public static Price fromAvro(PriceAvro priceAvro) {
+		return new Price(
+				priceAvro.getOfferId(),
+				priceAvro.getProductId(),
+				priceAvro.getSkuId(),
+				priceAvro.getAmount());
+	}
 }

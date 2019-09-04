@@ -28,4 +28,13 @@ public class Offer {
 		this.name = details.getName();
 		this.description = details.getDescription();
 	}
+
+	public OfferAvro toAvro() {
+		return OfferAvro.newBuilder()
+				.setId(id)
+				.setName(name)
+				.setDescription(description)
+				.setPrice(price)
+				.build();
+	}
 }

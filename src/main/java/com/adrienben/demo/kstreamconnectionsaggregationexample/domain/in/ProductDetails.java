@@ -11,4 +11,11 @@ public class ProductDetails {
 	private String name;
 	private String description;
 	private String brand;
+
+	public static ProductDetails fromAvro(ProductDetailsAvro productDetailsAvro) {
+		return new ProductDetails(
+				productDetailsAvro.getName(),
+				productDetailsAvro.getDescription(),
+				productDetailsAvro.getBrand());
+	}
 }

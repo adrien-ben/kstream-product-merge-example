@@ -1,0 +1,23 @@
+{
+    "type": "record",
+    "name": "SkuDetailsAvro",
+    "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
+    "fields": [
+        {
+            "name": "skuId",
+            "type": "string"
+        },
+        {
+            "name": "productId",
+            "type": "string"
+        },
+        {
+            "name": "name",
+            "type": "string"
+        },
+        {
+            "name": "description",
+            "type": "string"
+        }
+    ]
+}
