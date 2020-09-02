@@ -92,20 +92,12 @@ The merged products we be sent into the `products` topic.
 ## Implementation
 
 One approach could be to join the multiple topics two-by-two.
-This appraoch is not optimal because it would make our application generate multiple state store for each intermediate join operation.
-And one changelog topic for each of them. This is not our appraoch.
+This approach is not optimal because it would make our application generate multiple state store for each intermediate join operation.
+And one changelog topic for each of them. This is not our approach.
 
-We choose to stream each input topic and use the transformer API to manage only one state store that will contained the merged product.
-The transformer will be responsible for:
+We choose to stream each input topic and use the co-group method from the Kafka Streams DSL to merge all 4 topics using only one state-store.
 
-- initiating the product when receiving the first part
-- merging the received part in the product
-- outputting the product if it's complete
-
-The transformer will be generic inplementation that takes a merging function use to merge one of the part into the product.
-We will create one instance of this transformer by input to merg in the final product.
-
-To do that we fist need to re-key the various input by product id and send them through an intermidiate topic
+To do that we fist need to re-key the various input by product id and send them through an intermediate topic
 to ensure proper partitioning of the message.
 
 ## Topology
