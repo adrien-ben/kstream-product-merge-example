@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Data
 @AllArgsConstructor
@@ -66,5 +67,15 @@ public class Product {
 					skus.add(newSku);
 					return newSku;
 				});
+	}
+
+	public ProductAvro toAvro() {
+		return ProductAvro.newBuilder()
+				.setId(id)
+				.setName(name)
+				.setDescription(description)
+				.setBrand(brand)
+				.setSkus(skus.stream().map(Sku::toAvro).collect(Collectors.toList()))
+				.build();
 	}
 }

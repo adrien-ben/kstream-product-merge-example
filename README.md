@@ -11,6 +11,9 @@ You can find a version using Avro as message format the the [avro branch](https:
 
 We consume the product part from 4 different topics:
 
+Examples are displayed as Json but application expects input messages to be Avro messages.
+The final result will also be outputted as an Avro message.
+
 - `product_details` contains general information about a product:
 
 ```json

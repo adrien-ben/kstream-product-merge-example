@@ -1,11 +1,17 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetailsAvro;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.PriceAvro;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetailsAvro;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetailsAvro;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Product;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.ProductAvro;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serde;
@@ -45,22 +51,26 @@ public class StreamConfig {
 	// Output topics
 	public static final String PRODUCTS_TOPIC = "products";
 
+	private final SpecificAvroSerde<ProductDetailsAvro> productDetailsAvroSerde;
+	private final SpecificAvroSerde<SkuDetailsAvro> skuDetailsAvroSerde;
+	private final SpecificAvroSerde<OfferDetailsAvro> offerDetailsAvroSerde;
+	private final SpecificAvroSerde<PriceAvro> priceAvroSerde;
+	private final SpecificAvroSerde<ProductAvro> productAvroSerde;
 	private final ObjectMapper mapper;
 
 	@Bean
-	public KStream<String, Product> kStream(StreamsBuilder streamBuilder) {
+	public KStream<String, ProductAvro> kStream(StreamsBuilder streamBuilder) {
 		// First we define the various serialization/deserialization objects we will need
 		var stringSerde = Serdes.String();
-		var productDetailsSerde = jsonSerde(ProductDetails.class);
-		var productDetailsConsumed = Consumed.with(stringSerde, productDetailsSerde);
-		var priceSerde = jsonSerde(Price.class);
-		var priceConsumed = Consumed.with(stringSerde, priceSerde);
-		var skuDetailsSerde = jsonSerde(SkuDetails.class);
-		var skuDetailsConsumed = Consumed.with(stringSerde, skuDetailsSerde);
-		var offerDetailsSerde = jsonSerde(OfferDetails.class);
-		var offerDetailsConsumed = Consumed.with(stringSerde, offerDetailsSerde);
-		var productSerde = jsonSerde(Product.class);
-		var productProduced = Produced.with(stringSerde, productSerde);
+		var skuDetailsJsonSerde = jsonSerde(SkuDetails.class);
+		var offerDetailsJsonSerde = jsonSerde(OfferDetails.class);
+		var priceJsonSerde = jsonSerde(Price.class);
+		var productJsonSerde = jsonSerde(Product.class);
+		var productDetailsAvroConsumed = Consumed.with(stringSerde, productDetailsAvroSerde);
+		var priceAvroConsumed = Consumed.with(stringSerde, priceAvroSerde);
+		var skuDetailsAvroConsumed = Consumed.with(stringSerde, skuDetailsAvroSerde);
+		var offerDetailsAvroConsumed = Consumed.with(stringSerde, offerDetailsAvroSerde);
+		var productAvroProduced = Produced.with(stringSerde, productAvroSerde);
 
 		// Group prices
 		// - We first stream the prices
@@ -68,34 +78,38 @@ public class StreamConfig {
 		// - Before we can join though, we need to re-repartition the prices to make sure price and product
 		// with the same key end up in the same partitions.
 		// - We can then group the prices by key.
-		var groupedPrices = streamBuilder.stream(PRICES_TOPIC, priceConsumed)
+		var groupedPrices = streamBuilder.stream(PRICES_TOPIC, priceAvroConsumed)
 				.selectKey((key, price) -> price.getProductId())
+				.mapValues(Price::fromAvro)
 				.repartition(Repartitioned.<String, Price>as(PRICES_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(priceSerde))
+						.withValueSerde(priceJsonSerde))
 				.groupByKey();
 
 		// Group offer details
 		// Same principe as the price grouping
-		var groupedOfferDetails = streamBuilder.stream(OFFER_DETAILS_TOPIC, offerDetailsConsumed)
+		var groupedOfferDetails = streamBuilder.stream(OFFER_DETAILS_TOPIC, offerDetailsAvroConsumed)
 				.selectKey((key, offerDetails) -> offerDetails.getProductId())
+				.mapValues(OfferDetails::fromAvro)
 				.repartition(Repartitioned.<String, OfferDetails>as(OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(offerDetailsSerde))
+						.withValueSerde(offerDetailsJsonSerde))
 				.groupByKey();
 
 		// Group sku details
 		// Same principe as the price grouping
-		var groupedSkuDetails = streamBuilder.stream(SKU_DETAILS_TOPIC, skuDetailsConsumed)
+		var groupedSkuDetails = streamBuilder.stream(SKU_DETAILS_TOPIC, skuDetailsAvroConsumed)
 				.selectKey((key, skuDetails) -> skuDetails.getProductId())
+				.mapValues(SkuDetails::fromAvro)
 				.repartition(Repartitioned.<String, SkuDetails>as(SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(skuDetailsSerde))
+						.withValueSerde(skuDetailsJsonSerde))
 				.groupByKey();
 
 		// Group sku details
 		// Same principe as the price grouping
-		var groupedProductDetails = streamBuilder.stream(PRODUCT_DETAILS_TOPIC, productDetailsConsumed)
+		var groupedProductDetails = streamBuilder.stream(PRODUCT_DETAILS_TOPIC, productDetailsAvroConsumed)
+				.mapValues(ProductDetails::fromAvro)
 				.mapValues((id, productDetails) -> {
 					productDetails.setId(id);
 					return productDetails;
@@ -114,11 +128,12 @@ public class StreamConfig {
 				.aggregate(Product::new,
 						Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as(PRODUCT_STORE_NAME)
 								.withKeySerde(stringSerde)
-								.withValueSerde(productSerde))
+								.withValueSerde(productJsonSerde))
 				.toStream()
-				.filter((key, product) -> product.isComplete());
+				.filter((key, product) -> product.isComplete())
+				.mapValues(Product::toAvro);
 
-		products.to(PRODUCTS_TOPIC, productProduced);
+		products.to(PRODUCTS_TOPIC, productAvroProduced);
 
 		return products;
 	}

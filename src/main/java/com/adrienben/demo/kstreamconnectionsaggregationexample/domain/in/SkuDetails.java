@@ -12,4 +12,12 @@ public class SkuDetails {
 	private String productId;
 	private String name;
 	private String description;
+
+	public static SkuDetails fromAvro(SkuDetailsAvro skuDetailsAvro) {
+		return new SkuDetails(
+				skuDetailsAvro.getSkuId(),
+				skuDetailsAvro.getProductId(),
+				skuDetailsAvro.getName(),
+				skuDetailsAvro.getDescription());
+	}
 }

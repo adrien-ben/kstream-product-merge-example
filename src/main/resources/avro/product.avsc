@@ -1,0 +1,75 @@
+{
+    "type": "record",
+    "name": "ProductAvro",
+    "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out",
+    "fields": [
+        {
+            "name": "id",
+            "type": "string"
+        },
+        {
+            "name": "name",
+            "type": "string"
+        },
+        {
+            "name": "description",
+            "type": "string"
+        },
+        {
+            "name": "brand",
+            "type": "string"
+        },
+        {
+            "name": "skus",
+            "type": {
+                "type": "array",
+                "items": {
+                    "name": "SkuAvro",
+                    "type": "record",
+                    "fields": [
+                        {
+                            "name": "id",
+                            "type": "string"
+                        },
+                        {
+                            "name": "name",
+                            "type": "string"
+                        },
+                        {
+                            "name": "description",
+                            "type": "string"
+                        },
+                        {
+                            "name": "offers",
+                            "type": {
+                                "type": "array",
+                                "items": {
+                                    "name": "OfferAvro",
+                                    "type": "record",
+                                    "fields": [
+                                        {
+                                            "name": "id",
+                                            "type": "string"
+                                        },
+                                        {
+                                            "name": "name",
+                                            "type": "string"
+                                        },
+                                        {
+                                            "name": "description",
+                                            "type": "string"
+                                        },
+                                        {
+                                            "name": "price",
+                                            "type": "float"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

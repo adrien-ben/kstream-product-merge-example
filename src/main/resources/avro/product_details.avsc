@@ -1,0 +1,19 @@
+{
+    "type": "record",
+    "name": "ProductDetailsAvro",
+    "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
+    "fields": [
+        {
+            "name": "name",
+            "type": "string"
+        },
+        {
+            "name": "description",
+            "type": "string"
+        },
+        {
+            "name": "brand",
+            "type": "string"
+        }
+    ]
+}

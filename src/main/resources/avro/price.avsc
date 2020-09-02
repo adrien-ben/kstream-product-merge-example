@@ -1,0 +1,23 @@
+{
+    "type": "record",
+    "name": "PriceAvro",
+    "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
+    "fields": [
+        {
+            "name": "offerId",
+            "type": "string"
+        },
+        {
+            "name": "productId",
+            "type": "string"
+        },
+        {
+            "name": "skuId",
+            "type": "string"
+        },
+        {
+            "name": "amount",
+            "type": "float"
+        }
+    ]
+}
