@@ -15,17 +15,20 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.TopologyTestDriver;
-import org.apache.kafka.streams.test.ConsumerRecordFactory;
-import org.apache.kafka.streams.test.OutputVerifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.OFFER_DETAILS_TOPIC;
@@ -34,19 +37,36 @@ import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.Str
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.PRODUCT_DETAILS_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.SKU_DETAILS_TOPIC;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @Slf4j
+@SpringBootTest(classes = JacksonAutoConfiguration.class)
 class StreamConfigTest {
 
-	private static ObjectMapper mapper = new JacksonConfig().objectMapper();
+	@Autowired
+	private ObjectMapper mapper;
 
 	private TopologyTestDriver topologyTestDriver;
+	private TestInputTopic<String, ProductDetails> productDetailsInputTopic;
+	private TestInputTopic<byte[], SkuDetails> skuDetailsInputTopic;
+	private TestInputTopic<byte[], OfferDetails> offerDetailsInputTopic;
+	private TestInputTopic<byte[], Price> priceInputTopic;
+	private TestOutputTopic<String, Product> productOutputTopic;
 
 	@BeforeEach
 	void setup() {
 		topologyTestDriver = buildTopologyTestDriver();
+
+		productDetailsInputTopic = topologyTestDriver
+				.createInputTopic(PRODUCT_DETAILS_TOPIC, new StringSerializer(), new JsonSerializer<>());
+		skuDetailsInputTopic = topologyTestDriver
+				.createInputTopic(SKU_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<>());
+		offerDetailsInputTopic = topologyTestDriver
+				.createInputTopic(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<>());
+		priceInputTopic = topologyTestDriver
+				.createInputTopic(PRICES_TOPIC, new ByteArraySerializer(), new JsonSerializer<>());
+		productOutputTopic = topologyTestDriver
+				.createOutputTopic(PRODUCTS_TOPIC, new StringDeserializer(), createJsonDeserializer(Product.class));
 	}
 
 	@AfterEach
@@ -61,10 +81,6 @@ class StreamConfigTest {
 	@Test
 	@DisplayName("It should only output product when complete")
 	void productCompleteness() {
-		var productDetailsFactory = new ConsumerRecordFactory<>(PRODUCT_DETAILS_TOPIC, new StringSerializer(), new JsonSerializer<ProductDetails>());
-		var skuDetailsFactory = new ConsumerRecordFactory<>(SKU_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<SkuDetails>());
-		var offerDetailsFactory = new ConsumerRecordFactory<>(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), new JsonSerializer<OfferDetails>());
-		var priceFactory = new ConsumerRecordFactory<>(PRICES_TOPIC, new ByteArraySerializer(), new JsonSerializer<Price>());
 
 		// Send a price
 		var price = new Price(
@@ -72,8 +88,8 @@ class StreamConfigTest {
 				"P1",
 				"S1P1",
 				19_999.99f);
-		topologyTestDriver.pipeInput(priceFactory.create(price));
-		assertIncompleteProductNotInKafka(topologyTestDriver);
+		priceInputTopic.pipeInput(price);
+		assertIncompleteProductNotInKafka();
 
 		// Send offer details
 		var offerDetails = new OfferDetails(
@@ -82,8 +98,8 @@ class StreamConfigTest {
 				"S1P1",
 				"Refurbished blue wonderful thing",
 				"That's a wonderful thing, trust me..., and this one is blue ! It should work too.");
-		topologyTestDriver.pipeInput(offerDetailsFactory.create(offerDetails));
-		assertIncompleteProductNotInKafka(topologyTestDriver);
+		offerDetailsInputTopic.pipeInput(offerDetails);
+		assertIncompleteProductNotInKafka();
 
 		// Send sku details
 		var skuDetails = new SkuDetails(
@@ -91,46 +107,49 @@ class StreamConfigTest {
 				"P1",
 				"Blue wonderful thing",
 				"That's a wonderful thing, trust me..., and this one is blue !");
-		topologyTestDriver.pipeInput(skuDetailsFactory.create(skuDetails));
-		assertIncompleteProductNotInKafka(topologyTestDriver);
+		skuDetailsInputTopic.pipeInput(skuDetails);
+		assertIncompleteProductNotInKafka();
 
 		// Send product details
 		var productDetails = new ProductDetails(
+				null,
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys");
-		topologyTestDriver.pipeInput(productDetailsFactory.create(PRODUCT_DETAILS_TOPIC, "P1", productDetails));
-		var product = topologyTestDriver.readOutput(PRODUCTS_TOPIC, new StringDeserializer(), createJsonDeserializer(Product.class));
+		productDetailsInputTopic.pipeInput("P1", productDetails);
+
+		// Read resulting product
+		var productKeyValue = productOutputTopic.readKeyValue();
 
 		var expectedProduct = new Product(
 				"P1",
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys",
-				Collections.singletonList(new Sku(
+				List.of(new Sku(
 						"S1P1",
 						"Blue wonderful thing",
 						"That's a wonderful thing, trust me..., and this one is blue !",
-						Collections.singletonList(new Offer(
+						List.of(new Offer(
 								"O1S1P1",
 								"Refurbished blue wonderful thing",
 								"That's a wonderful thing, trust me..., and this one is blue ! It should work too.",
 								19_999.99f
 						)))));
 
-		OutputVerifier.compareKeyValue(product, "P1", expectedProduct);
+		assertThat(productKeyValue.key, is("P1"));
+		assertThat(productKeyValue.value, is(expectedProduct));
 	}
 
-	private static void assertIncompleteProductNotInKafka(TopologyTestDriver topologyTestDriver) {
-		var product = topologyTestDriver.readOutput(PRODUCTS_TOPIC);
-		assertThat(product, is(nullValue()));
+	private void assertIncompleteProductNotInKafka() {
+		assertThat(productOutputTopic.isEmpty(), is(true));
 	}
 
-	private static <T> Deserializer<T> createJsonDeserializer(Class<T> tClass) {
+	private <T> Deserializer<T> createJsonDeserializer(Class<T> tClass) {
 		return new JsonDeserializer<>(tClass, mapper, false);
 	}
 
-	private static TopologyTestDriver buildTopologyTestDriver() {
+	private TopologyTestDriver buildTopologyTestDriver() {
 		var streamConfig = new StreamConfig(mapper);
 
 		var streamsBuilder = new StreamsBuilder();

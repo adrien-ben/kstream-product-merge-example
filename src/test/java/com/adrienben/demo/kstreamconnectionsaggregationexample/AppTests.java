@@ -28,17 +28,14 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.Duration;
-import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.OFFER_DETAILS_TOPIC;
-import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.PRICES_BY_PRODUCT_ID_REKEY_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.PRICES_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.PRODUCTS_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.PRODUCT_DETAILS_TOPIC;
-import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC;
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.SKU_DETAILS_TOPIC;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,8 +44,7 @@ import static org.springframework.kafka.test.hamcrest.KafkaMatchers.hasValue;
 
 @SpringBootTest
 @EmbeddedKafka(
-		topics = { PRODUCT_DETAILS_TOPIC, SKU_DETAILS_TOPIC, SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC, OFFER_DETAILS_TOPIC,
-				OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC, PRICES_TOPIC, PRICES_BY_PRODUCT_ID_REKEY_TOPIC, PRODUCTS_TOPIC },
+		topics = { PRODUCT_DETAILS_TOPIC, SKU_DETAILS_TOPIC, OFFER_DETAILS_TOPIC, PRICES_TOPIC, PRODUCTS_TOPIC },
 		ports = { 19092 }
 )
 @TestPropertySource(properties = "spring.kafka.bootstrap-servers=localhost:19092")
@@ -98,6 +94,7 @@ public class AppTests {
 
 		// Send product details
 		var productDetails = new ProductDetails(
+				null,
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys");
@@ -109,11 +106,11 @@ public class AppTests {
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys",
-				Collections.singletonList(new Sku(
+				List.of(new Sku(
 						"S1P1",
 						"Blue wonderful thing",
 						"That's a wonderful thing, trust me..., and this one is blue !",
-						Collections.singletonList(new Offer(
+						List.of(new Offer(
 								"O1S1P1",
 								"Refurbished blue wonderful thing",
 								"That's a wonderful thing, trust me..., and this one is blue ! It should work too.",
@@ -147,7 +144,7 @@ public class AppTests {
 
 	private static void assertIncompleteProductNotInKafka(Consumer<String, Product> productConsumer) {
 		assertThrows(
-				AssertionError.class,
+				IllegalStateException.class,
 				() -> KafkaTestUtils.getSingleRecord(productConsumer, PRODUCTS_TOPIC, Duration.ofSeconds(5).toMillis()),
 				"Product should be incomplete and should not have been sent to Kafka");
 	}

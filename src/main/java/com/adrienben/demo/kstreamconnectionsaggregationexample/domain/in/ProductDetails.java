@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductDetails {
+	private String id;
 	private String name;
 	private String description;
 	private String brand;

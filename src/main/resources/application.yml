@@ -1,12 +1,19 @@
 spring:
   application:
     name: kstream-product-merge-example
+
   kafka:
     streams:
       state-dir: ./target/kstream-statestore
       properties:
-        commit.interval.ms: 100
         default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: true
+    deserialization:
+      fail-on-unknown-properties: false
 
 logging:
   level:

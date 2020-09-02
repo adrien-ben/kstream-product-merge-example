@@ -24,31 +24,32 @@ public class Product {
 	private String brand;
 	private List<Sku> skus = new ArrayList<>();
 
-	public Product(String id) {
-		this.id = id;
-	}
-
 	@JsonIgnore
 	public boolean isComplete() {
 		return id != null && !"".equals(id) && name != null && brand != null;
 	}
 
-	public void mergeProductDetails(ProductDetails productDetails) {
+	public Product mergeProductDetails(ProductDetails productDetails) {
+		this.id = productDetails.getId();
 		this.name = productDetails.getName();
 		this.description = productDetails.getDescription();
 		this.brand = productDetails.getBrand();
+		return this;
 	}
 
-	public void mergeSkuDetails(SkuDetails skuDetails) {
+	public Product mergeSkuDetails(SkuDetails skuDetails) {
 		mergeSkuData(skuDetails.getSkuId(), sku -> sku.mergeDetails(skuDetails));
+		return this;
 	}
 
-	public void mergePrice(Price price) {
+	public Product mergePrice(Price price) {
 		mergeSkuData(price.getSkuId(), sku -> sku.mergePrice(price));
+		return this;
 	}
 
-	public void mergeOfferDetails(OfferDetails offerDetails) {
+	public Product mergeOfferDetails(OfferDetails offerDetails) {
 		mergeSkuData(offerDetails.getSkuId(), sku -> sku.mergeOfferDetails(offerDetails));
+		return this;
 	}
 
 	private void mergeSkuData(String skuId, Consumer<Sku> merger) {
