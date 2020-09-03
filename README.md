@@ -5,7 +5,9 @@
 In this example we are going to merge product information coming from multiple topics.
 Only product with the minimal required information (id, name and brand) will be outputted.
 
-You can find a version using Avro as message format the the [avro branch](https://github.com/adrien-ben/kstream-product-merge-example/tree/avro)
+You can find a version using Avro as message format the the [avro branch](https://github.com/adrien-ben/kstream-product-merge-example/tree/avro).
+
+And one using Protobuf as message format the the [protobuf branch](https://github.com/adrien-ben/kstream-product-merge-example/tree/protobuf).
 
 ## Input
 
