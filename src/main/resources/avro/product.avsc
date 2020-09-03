@@ -5,19 +5,19 @@
     "fields": [
         {
             "name": "id",
-            "type": "string"
+            "type": ["null", "string"]
         },
         {
             "name": "name",
-            "type": "string"
+            "type": ["null", "string"]
         },
         {
             "name": "description",
-            "type": "string"
+            "type": ["null", "string"]
         },
         {
             "name": "brand",
-            "type": "string"
+            "type": ["null", "string"]
         },
         {
             "name": "skus",
@@ -29,15 +29,15 @@
                     "fields": [
                         {
                             "name": "id",
-                            "type": "string"
+                            "type": ["null", "string"]
                         },
                         {
                             "name": "name",
-                            "type": "string"
+                            "type": ["null", "string"]
                         },
                         {
                             "name": "description",
-                            "type": "string"
+                            "type": ["null", "string"]
                         },
                         {
                             "name": "offers",
@@ -49,19 +49,19 @@
                                     "fields": [
                                         {
                                             "name": "id",
-                                            "type": "string"
+                                            "type": ["null", "string"]
                                         },
                                         {
                                             "name": "name",
-                                            "type": "string"
+                                            "type": ["null", "string"]
                                         },
                                         {
                                             "name": "description",
-                                            "type": "string"
+                                            "type": ["null", "string"]
                                         },
                                         {
                                             "name": "price",
-                                            "type": "float"
+                                            "type": ["null", "float"]
                                         }
                                     ]
                                 }

@@ -16,8 +16,8 @@ public class ProductDetails {
 	public static ProductDetails fromAvro(ProductDetailsAvro productDetailsAvro) {
 		return new ProductDetails(
 				null,
-				productDetailsAvro.getName(),
-				productDetailsAvro.getDescription(),
-				productDetailsAvro.getBrand());
+				productDetailsAvro.getName().toString(),
+				productDetailsAvro.getDescription().toString(),
+				productDetailsAvro.getBrand().toString());
 	}
 }

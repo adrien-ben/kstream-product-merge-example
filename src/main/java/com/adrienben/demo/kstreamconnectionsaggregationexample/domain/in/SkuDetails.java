@@ -15,9 +15,9 @@ public class SkuDetails {
 
 	public static SkuDetails fromAvro(SkuDetailsAvro skuDetailsAvro) {
 		return new SkuDetails(
-				skuDetailsAvro.getSkuId(),
-				skuDetailsAvro.getProductId(),
-				skuDetailsAvro.getName(),
-				skuDetailsAvro.getDescription());
+				skuDetailsAvro.getSkuId().toString(),
+				skuDetailsAvro.getProductId().toString(),
+				skuDetailsAvro.getName().toString(),
+				skuDetailsAvro.getDescription().toString());
 	}
 }

@@ -15,9 +15,9 @@ public class Price {
 
 	public static Price fromAvro(PriceAvro priceAvro) {
 		return new Price(
-				priceAvro.getOfferId(),
-				priceAvro.getProductId(),
-				priceAvro.getSkuId(),
+				priceAvro.getOfferId().toString(),
+				priceAvro.getProductId().toString(),
+				priceAvro.getSkuId().toString(),
 				priceAvro.getAmount());
 	}
 }

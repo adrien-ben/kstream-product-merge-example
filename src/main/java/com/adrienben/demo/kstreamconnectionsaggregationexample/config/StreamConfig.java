@@ -79,7 +79,7 @@ public class StreamConfig {
 		// with the same key end up in the same partitions.
 		// - We can then group the prices by key.
 		var groupedPrices = streamBuilder.stream(PRICES_TOPIC, priceAvroConsumed)
-				.selectKey((key, price) -> price.getProductId())
+				.selectKey((key, price) -> price.getProductId().toString())
 				.mapValues(Price::fromAvro)
 				.repartition(Repartitioned.<String, Price>as(PRICES_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
@@ -89,7 +89,7 @@ public class StreamConfig {
 		// Group offer details
 		// Same principe as the price grouping
 		var groupedOfferDetails = streamBuilder.stream(OFFER_DETAILS_TOPIC, offerDetailsAvroConsumed)
-				.selectKey((key, offerDetails) -> offerDetails.getProductId())
+				.selectKey((key, offerDetails) -> offerDetails.getProductId().toString())
 				.mapValues(OfferDetails::fromAvro)
 				.repartition(Repartitioned.<String, OfferDetails>as(OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
@@ -99,7 +99,7 @@ public class StreamConfig {
 		// Group sku details
 		// Same principe as the price grouping
 		var groupedSkuDetails = streamBuilder.stream(SKU_DETAILS_TOPIC, skuDetailsAvroConsumed)
-				.selectKey((key, skuDetails) -> skuDetails.getProductId())
+				.selectKey((key, skuDetails) -> skuDetails.getProductId().toString())
 				.mapValues(SkuDetails::fromAvro)
 				.repartition(Repartitioned.<String, SkuDetails>as(SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
