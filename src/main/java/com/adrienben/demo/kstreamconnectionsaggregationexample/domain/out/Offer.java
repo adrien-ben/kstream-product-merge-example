@@ -1,5 +1,6 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out;
 
+import com.adrienben.demo.domain.out.OfferProto;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
 import lombok.AllArgsConstructor;
@@ -27,5 +28,14 @@ public class Offer {
 	public void mergeOfferDetails(OfferDetails details) {
 		this.name = details.getName();
 		this.description = details.getDescription();
+	}
+
+	public OfferProto toProto() {
+		return OfferProto.newBuilder()
+				.setId(id)
+				.setName(name)
+				.setDescription(description)
+				.setPrice(price)
+				.build();
 	}
 }

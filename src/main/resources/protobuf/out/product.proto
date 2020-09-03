@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package com.adrienben.demo.domain.out;
+
+option java_multiple_files = true;
+
+message ProductProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string brand = 4;
+  repeated SkuProto skus = 5;
+}
+
+message SkuProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated OfferProto offers = 4;
+}
+
+message OfferProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+}

@@ -7,6 +7,7 @@ spring:
       state-dir: ./target/kstream-statestore
       properties:
         default.deserialization.exception.handler: org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
+        schema.registry.url: http://localhost:8081
 
   jackson:
     default-property-inclusion: non_null

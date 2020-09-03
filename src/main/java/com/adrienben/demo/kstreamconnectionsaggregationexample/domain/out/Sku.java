@@ -1,5 +1,6 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out;
 
+import com.adrienben.demo.domain.out.SkuProto;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
 import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetails;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -52,5 +54,14 @@ public class Sku {
 					offers.add(newOffer);
 					return newOffer;
 				});
+	}
+
+	public SkuProto toProto() {
+		return SkuProto.newBuilder()
+				.setId(id)
+				.setName(name)
+				.setDescription(description)
+				.addAllOffers(offers.stream().map(Offer::toProto).collect(Collectors.toList()))
+				.build();
 	}
 }

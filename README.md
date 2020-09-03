@@ -5,11 +5,12 @@
 In this example we are going to merge product information coming from multiple topics.
 Only product with the minimal required information (id, name and brand) will be outputted.
 
-You can find a version using Avro as message format the the [avro branch](https://github.com/adrien-ben/kstream-product-merge-example/tree/avro)
-
 ## Input
 
 We consume the product part from 4 different topics:
+
+Examples are displayed as Json but application expects input messages to be Protobuf messages.
+The final result will also be outputted as a Protobuf message.
 
 - `product_details` contains general information about a product:
 

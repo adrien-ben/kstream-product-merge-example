@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package com.adrienben.demo.domain.in;
+
+option java_multiple_files = true;
+
+message ProductDetailsProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string brand = 4;
+}
