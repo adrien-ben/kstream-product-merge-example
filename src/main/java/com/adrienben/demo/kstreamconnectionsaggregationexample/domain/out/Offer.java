@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import static com.adrienben.demo.kstreamconnectionsaggregationexample.util.Utils.setIfNotNull;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,11 +33,11 @@ public class Offer {
 	}
 
 	public OfferProto toProto() {
-		return OfferProto.newBuilder()
-				.setId(id)
-				.setName(name)
-				.setDescription(description)
-				.setPrice(price)
-				.build();
+		var offer = OfferProto.newBuilder();
+		setIfNotNull(offer, id, OfferProto.Builder::setId);
+		setIfNotNull(offer, name, OfferProto.Builder::setName);
+		setIfNotNull(offer, description, OfferProto.Builder::setDescription);
+		setIfNotNull(offer, price, OfferProto.Builder::setPrice);
+		return offer.build();
 	}
 }

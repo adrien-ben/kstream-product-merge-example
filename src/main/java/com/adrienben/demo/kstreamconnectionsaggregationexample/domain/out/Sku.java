@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.adrienben.demo.kstreamconnectionsaggregationexample.util.Utils.setIfNotNull;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -57,11 +59,10 @@ public class Sku {
 	}
 
 	public SkuProto toProto() {
-		return SkuProto.newBuilder()
-				.setId(id)
-				.setName(name)
-				.setDescription(description)
-				.addAllOffers(offers.stream().map(Offer::toProto).collect(Collectors.toList()))
-				.build();
+		var sku = SkuProto.newBuilder();
+		setIfNotNull(sku, id, SkuProto.Builder::setId);
+		setIfNotNull(sku, name, SkuProto.Builder::setName);
+		setIfNotNull(sku, description, SkuProto.Builder::setDescription);
+		return sku.addAllOffers(offers.stream().map(Offer::toProto).collect(Collectors.toList())).build();
 	}
 }

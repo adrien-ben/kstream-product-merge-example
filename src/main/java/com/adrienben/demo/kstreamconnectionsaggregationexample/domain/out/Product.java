@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.adrienben.demo.kstreamconnectionsaggregationexample.util.Utils.setIfNotNull;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -71,12 +73,11 @@ public class Product {
 	}
 
 	public ProductProto toProto() {
-		return ProductProto.newBuilder()
-				.setId(id)
-				.setName(name)
-				.setDescription(description)
-				.setBrand(brand)
-				.addAllSkus(skus.stream().map(Sku::toProto).collect(Collectors.toList()))
-				.build();
+		var product = ProductProto.newBuilder();
+		setIfNotNull(product, id, ProductProto.Builder::setId);
+		setIfNotNull(product, name, ProductProto.Builder::setName);
+		setIfNotNull(product, description, ProductProto.Builder::setDescription);
+		setIfNotNull(product, brand, ProductProto.Builder::setBrand);
+		return product.addAllSkus(skus.stream().map(Sku::toProto).collect(Collectors.toList())).build();
 	}
 }

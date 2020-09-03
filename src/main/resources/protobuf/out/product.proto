@@ -9,14 +9,14 @@ message ProductProto {
   string name = 2;
   string description = 3;
   string brand = 4;
-  repeated SkuProto skus = 5;
+  repeated .com.adrienben.demo.domain.out.SkuProto skus = 5;
 }
 
 message SkuProto {
   string id = 1;
   string name = 2;
   string description = 3;
-  repeated OfferProto offers = 4;
+  repeated .com.adrienben.demo.domain.out.OfferProto offers = 4;
 }
 
 message OfferProto {
