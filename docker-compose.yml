@@ -1,5 +1,5 @@
 ---
-version: "2"
+version: "3"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.1
@@ -29,16 +29,18 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TOPIC_AUTO_CREATE: "true"
 
-  kafkahq:
-    image: tchiotludo/kafkahq:latest
+  akhq:
+    image: tchiotludo/akhq
     environment:
-      KAFKAHQ_CONFIGURATION: |
-        kafkahq:
+      AKHQ_CONFIGURATION: |
+        akhq:
           connections:
             docker-kafka-server:
               properties:
                 bootstrap.servers: "broker:9092"
+              schema-registry:
+                url: "http://schema-registry:8081"
     ports:
       - 8090:8080
-    links:
+    depends_on:
       - broker
