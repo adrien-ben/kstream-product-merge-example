@@ -1,75 +1,88 @@
 {
     "type": "record",
-    "name": "ProductAvro",
+    "name": "Product",
     "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out",
     "fields": [
         {
             "name": "id",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "name",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "description",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "brand",
-            "type": ["null", "string"]
+            "type": ["null", "string"],
+            "default": null
         },
         {
             "name": "skus",
             "type": {
                 "type": "array",
                 "items": {
-                    "name": "SkuAvro",
+                    "name": "Sku",
                     "type": "record",
                     "fields": [
                         {
                             "name": "id",
-                            "type": ["null", "string"]
+                            "type": ["null", "string"],
+                            "default": null
                         },
                         {
                             "name": "name",
-                            "type": ["null", "string"]
+                            "type": ["null", "string"],
+                            "default": null
                         },
                         {
                             "name": "description",
-                            "type": ["null", "string"]
+                            "type": ["null", "string"],
+                            "default": null
                         },
                         {
                             "name": "offers",
                             "type": {
                                 "type": "array",
                                 "items": {
-                                    "name": "OfferAvro",
+                                    "name": "Offer",
                                     "type": "record",
                                     "fields": [
                                         {
                                             "name": "id",
-                                            "type": ["null", "string"]
+                                            "type": ["null", "string"],
+                                            "default": null
                                         },
                                         {
                                             "name": "name",
-                                            "type": ["null", "string"]
+                                            "type": ["null", "string"],
+                                            "default": null
                                         },
                                         {
                                             "name": "description",
-                                            "type": ["null", "string"]
+                                            "type": ["null", "string"],
+                                            "default": null
                                         },
                                         {
                                             "name": "price",
-                                            "type": ["null", "float"]
+                                            "type": ["null", "float"],
+                                            "default": null
                                         }
                                     ]
                                 }
-                            }
+                            },
+                            "default": []
                         }
                     ]
                 }
-            }
+            },
+            "default": []
         }
     ]
 }

@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "ProductDetailsAvro",
+    "name": "ProductDetails",
     "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
     "fields": [
         {

@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "SkuDetailsAvro",
+    "name": "SkuDetails",
     "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
     "fields": [
         {

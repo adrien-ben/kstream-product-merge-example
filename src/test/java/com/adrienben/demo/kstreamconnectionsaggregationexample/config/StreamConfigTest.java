@@ -1,17 +1,13 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetailsAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.PriceAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetailsAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetailsAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.OfferAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.ProductAvro;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.SkuAvro;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.confluent.kafka.schemaregistry.avro.AvroSchema;
-import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetails;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Offer;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Product;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Sku;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.service.ProductService;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +23,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.TestConstructor;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
@@ -48,35 +40,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @Slf4j
 @RequiredArgsConstructor
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
-@SpringBootTest(classes = { JacksonAutoConfiguration.class, AvroConfig.class, StreamConfigTest.SchemaRegistryConfiguration.class })
+@SpringBootTest(classes = { AvroConfig.class, SchemaRegistryConfiguration.class })
 class StreamConfigTest {
 
-	@TestConfiguration
-	static class SchemaRegistryConfiguration {
-		@Bean
-		public SchemaRegistryClient schemaRegistryClient() throws IOException, RestClientException {
-			var client = new MockSchemaRegistryClient();
-			client.register(PRODUCT_DETAILS_TOPIC + "-value", new AvroSchema(ProductDetailsAvro.SCHEMA$));
-			client.register(SKU_DETAILS_TOPIC + "-value", new AvroSchema(SkuDetailsAvro.SCHEMA$));
-			client.register(OFFER_DETAILS_TOPIC + "-value", new AvroSchema(OfferDetailsAvro.SCHEMA$));
-			client.register(PRICES_TOPIC + "-value", new AvroSchema(PriceAvro.SCHEMA$));
-			client.register(PRODUCTS_TOPIC + "-value", new AvroSchema(ProductAvro.SCHEMA$));
-			return client;
-		}
-	}
+	private final SpecificAvroSerde<ProductDetails> productDetailsSerde;
+	private final SpecificAvroSerde<SkuDetails> skuDetailsSerde;
+	private final SpecificAvroSerde<OfferDetails> offerDetailsSerde;
+	private final SpecificAvroSerde<Price> priceSerde;
+	private final SpecificAvroSerde<Product> productSerde;
 
-	private final SpecificAvroSerde<ProductDetailsAvro> productDetailsAvroSerde;
-	private final SpecificAvroSerde<SkuDetailsAvro> skuDetailsAvroSerde;
-	private final SpecificAvroSerde<OfferDetailsAvro> offerDetailsAvroSerde;
-	private final SpecificAvroSerde<PriceAvro> priceAvroSerde;
-	private final SpecificAvroSerde<ProductAvro> productAvroSerde;
-	private final ObjectMapper mapper;
-
-	private TestInputTopic<String, ProductDetailsAvro> productDetailsInputTopic;
-	private TestInputTopic<byte[], SkuDetailsAvro> skuDetailsInputTopic;
-	private TestInputTopic<byte[], OfferDetailsAvro> offerDetailsInputTopic;
-	private TestInputTopic<byte[], PriceAvro> priceInputTopic;
-	private TestOutputTopic<String, ProductAvro> productOutputTopic;
+	private TestInputTopic<String, ProductDetails> productDetailsInputTopic;
+	private TestInputTopic<byte[], SkuDetails> skuDetailsInputTopic;
+	private TestInputTopic<byte[], OfferDetails> offerDetailsInputTopic;
+	private TestInputTopic<byte[], Price> priceInputTopic;
+	private TestOutputTopic<String, Product> productOutputTopic;
 	private TopologyTestDriver topologyTestDriver;
 
 	@BeforeEach
@@ -84,28 +61,28 @@ class StreamConfigTest {
 		topologyTestDriver = buildTopologyTestDriver();
 
 		productDetailsInputTopic = topologyTestDriver
-				.createInputTopic(PRODUCT_DETAILS_TOPIC, new StringSerializer(), productDetailsAvroSerde.serializer());
+				.createInputTopic(PRODUCT_DETAILS_TOPIC, new StringSerializer(), productDetailsSerde.serializer());
 		skuDetailsInputTopic = topologyTestDriver
-				.createInputTopic(SKU_DETAILS_TOPIC, new ByteArraySerializer(), skuDetailsAvroSerde.serializer());
+				.createInputTopic(SKU_DETAILS_TOPIC, new ByteArraySerializer(), skuDetailsSerde.serializer());
 		offerDetailsInputTopic = topologyTestDriver
-				.createInputTopic(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), offerDetailsAvroSerde.serializer());
+				.createInputTopic(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), offerDetailsSerde.serializer());
 		priceInputTopic = topologyTestDriver
-				.createInputTopic(PRICES_TOPIC, new ByteArraySerializer(), priceAvroSerde.serializer());
+				.createInputTopic(PRICES_TOPIC, new ByteArraySerializer(), priceSerde.serializer());
 		productOutputTopic = topologyTestDriver
-				.createOutputTopic(PRODUCTS_TOPIC, new StringDeserializer(), productAvroSerde.deserializer());
+				.createOutputTopic(PRODUCTS_TOPIC, new StringDeserializer(), productSerde.deserializer());
 	}
 
 	private TopologyTestDriver buildTopologyTestDriver() {
-		var streamConfig = new StreamConfig(
-				productDetailsAvroSerde,
-				skuDetailsAvroSerde,
-				offerDetailsAvroSerde,
-				priceAvroSerde,
-				productAvroSerde,
-				mapper);
-
+		var streamConfig = new StreamConfig();
 		var streamsBuilder = new StreamsBuilder();
-		streamConfig.kStream(streamsBuilder);
+
+		streamConfig.kStream(streamsBuilder,
+				productDetailsSerde,
+				skuDetailsSerde,
+				offerDetailsSerde,
+				priceSerde,
+				productSerde,
+				new ProductService());
 		var topology = streamsBuilder.build();
 
 		var properties = new Properties();
@@ -129,7 +106,7 @@ class StreamConfigTest {
 	void productCompleteness() {
 
 		// Send a price
-		var price = new PriceAvro(
+		var price = new Price(
 				"O1S1P1",
 				"P1",
 				"S1P1",
@@ -138,7 +115,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send offer details
-		var offerDetails = new OfferDetailsAvro(
+		var offerDetails = new OfferDetails(
 				"O1S1P1",
 				"P1",
 				"S1P1",
@@ -148,7 +125,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send sku details
-		var skuDetails = new SkuDetailsAvro(
+		var skuDetails = new SkuDetails(
 				"S1P1",
 				"P1",
 				"Blue wonderful thing",
@@ -157,7 +134,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send product details
-		var productDetails = new ProductDetailsAvro(
+		var productDetails = new ProductDetails(
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys");
@@ -166,16 +143,16 @@ class StreamConfigTest {
 		// Read resulting product
 		var productKeyValue = productOutputTopic.readKeyValue();
 
-		var expectedProduct = new ProductAvro(
+		var expectedProduct = new Product(
 				"P1",
 				"Wonderful thing",
 				"That's a wonderful thing, trust me...",
 				"ShadyGuys",
-				List.of(new SkuAvro(
+				List.of(new Sku(
 						"S1P1",
 						"Blue wonderful thing",
 						"That's a wonderful thing, trust me..., and this one is blue !",
-						List.of(new OfferAvro(
+						List.of(new Offer(
 								"O1S1P1",
 								"Refurbished blue wonderful thing",
 								"That's a wonderful thing, trust me..., and this one is blue ! It should work too.",

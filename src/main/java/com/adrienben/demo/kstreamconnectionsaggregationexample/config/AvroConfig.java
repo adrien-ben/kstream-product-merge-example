@@ -1,6 +1,7 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
+import io.confluent.kafka.serializers.subject.RecordNameStrategy;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.avro.specific.SpecificRecord;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,9 @@ import java.util.HashMap;
 import java.util.Optional;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS;
+import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.KEY_SUBJECT_NAME_STRATEGY;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
+import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY;
 
 @Configuration
 public class AvroConfig {
@@ -26,6 +29,8 @@ public class AvroConfig {
 		HashMap<String, Object> properties = new HashMap<>();
 		properties.put(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
 		properties.put(AUTO_REGISTER_SCHEMAS, false);
+		properties.put(KEY_SUBJECT_NAME_STRATEGY, RecordNameStrategy.class.getName());
+		properties.put(VALUE_SUBJECT_NAME_STRATEGY, RecordNameStrategy.class.getName());
 
 		SpecificAvroSerde<T> serde = schemaRegistryClient.map(SpecificAvroSerde<T>::new).orElseGet(SpecificAvroSerde::new);
 		serde.configure(properties, true);

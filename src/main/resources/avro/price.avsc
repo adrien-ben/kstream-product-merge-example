@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "PriceAvro",
+    "name": "Price",
     "namespace": "com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in",
     "fields": [
         {
