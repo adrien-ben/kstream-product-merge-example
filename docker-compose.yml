@@ -1,5 +1,5 @@
 ---
-version: "2"
+version: "3"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.1
@@ -55,6 +55,41 @@ services:
                 url: "http://schema-registry:8081"
     ports:
       - 8090:8080
-    links:
+    depends_on:
       - broker
       - schema-registry
+
+  app:
+    build:
+      context: .
+    image: app:0.0.2
+    hostname: app
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    environment:
+      JAVA_OPTS: -javaagent:/etc/prometheus/jmx_prometheus_javaagent-0.13.0.jar=8080:/etc/prometheus/jmx_exporter.yml -Xms128m -Xms256m
+      spring.kafka.bootstrap-servers: broker:9092
+      spring.kafka.streams.state-dir: ./data/kstream
+      spring.kafka.streams.properties.schema.registry.url: http://schema-registry:8081
+      spring.kafka.streams.properties.metrics.recording.level: DEBUG
+    ports:
+      - 8080:8080
+    depends_on:
+      - broker
+      - schema-registry
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana:7.0.6
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
