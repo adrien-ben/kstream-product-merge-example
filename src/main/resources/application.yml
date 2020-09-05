@@ -10,13 +10,6 @@ spring:
         schema.registry.url: http://localhost:8081
         num.stream.threads: 1
 
-  jackson:
-    default-property-inclusion: non_null
-    serialization:
-      write-dates-as-timestamps: true
-    deserialization:
-      fail-on-unknown-properties: false
-
 logging:
   level:
     org.springframework.kafka: DEBUG

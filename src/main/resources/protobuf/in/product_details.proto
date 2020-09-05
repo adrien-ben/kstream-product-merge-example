@@ -4,9 +4,8 @@ package com.adrienben.demo.domain.in;
 
 option java_multiple_files = true;
 
-message ProductDetailsProto {
-  string id = 1;
-  string name = 2;
-  string description = 3;
-  string brand = 4;
+message ProductDetails {
+  string name = 1;
+  string description = 2;
+  string brand = 3;
 }

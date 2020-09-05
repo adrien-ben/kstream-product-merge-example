@@ -1,16 +1,13 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample;
 
-import com.adrienben.demo.domain.in.OfferDetailsProto;
-import com.adrienben.demo.domain.in.PriceProto;
-import com.adrienben.demo.domain.in.ProductDetailsProto;
-import com.adrienben.demo.domain.in.SkuDetailsProto;
-import com.adrienben.demo.domain.out.OfferProto;
-import com.adrienben.demo.domain.out.ProductProto;
-import com.adrienben.demo.domain.out.SkuProto;
-import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
-import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
+import com.adrienben.demo.domain.in.OfferDetails;
+import com.adrienben.demo.domain.in.Price;
+import com.adrienben.demo.domain.in.ProductDetails;
+import com.adrienben.demo.domain.in.SkuDetails;
+import com.adrienben.demo.domain.out.Offer;
+import com.adrienben.demo.domain.out.Product;
+import com.adrienben.demo.domain.out.Sku;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.config.SchemaRegistryConfiguration;
 import io.confluent.kafka.streams.serdes.protobuf.KafkaProtobufSerde;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -23,8 +20,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -33,7 +29,6 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.context.TestConstructor;
 import org.springframework.test.context.TestPropertySource;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -49,6 +44,7 @@ import static org.springframework.kafka.test.hamcrest.KafkaMatchers.hasKey;
 import static org.springframework.kafka.test.hamcrest.KafkaMatchers.hasValue;
 
 @SpringBootTest
+@Import(SchemaRegistryConfiguration.class)
 @EmbeddedKafka(
 		topics = { PRODUCT_DETAILS_TOPIC, SKU_DETAILS_TOPIC, OFFER_DETAILS_TOPIC, PRICES_TOPIC, PRODUCTS_TOPIC },
 		ports = { 19092 }
@@ -58,28 +54,14 @@ import static org.springframework.kafka.test.hamcrest.KafkaMatchers.hasValue;
 @RequiredArgsConstructor
 public class AppTests {
 
-	@TestConfiguration
-	static class SchemaRegistryConfiguration {
-		@Bean
-		public SchemaRegistryClient schemaRegistryClient() throws IOException, RestClientException {
-			var client = new MockSchemaRegistryClient();
-			client.register(PRODUCT_DETAILS_TOPIC + "-value", new ProtobufSchema(ProductDetailsProto.getDescriptor()));
-			client.register(SKU_DETAILS_TOPIC + "-value", new ProtobufSchema(SkuDetailsProto.getDescriptor()));
-			client.register(OFFER_DETAILS_TOPIC + "-value", new ProtobufSchema(OfferDetailsProto.getDescriptor()));
-			client.register(PRICES_TOPIC + "-value", new ProtobufSchema(PriceProto.getDescriptor()));
-			client.register(PRODUCTS_TOPIC + "-value", new ProtobufSchema(ProductProto.getDescriptor()));
-			return client;
-		}
-	}
-
 	@Autowired
 	private EmbeddedKafkaBroker embeddedKafka;
 
-	private final KafkaProtobufSerde<ProductDetailsProto> productDetailsSerde;
-	private final KafkaProtobufSerde<SkuDetailsProto> skuDetailsSerde;
-	private final KafkaProtobufSerde<OfferDetailsProto> offerDetailsSerde;
-	private final KafkaProtobufSerde<PriceProto> priceSerde;
-	private final KafkaProtobufSerde<ProductProto> productSerde;
+	private final KafkaProtobufSerde<ProductDetails> productDetailsSerde;
+	private final KafkaProtobufSerde<SkuDetails> skuDetailsSerde;
+	private final KafkaProtobufSerde<OfferDetails> offerDetailsSerde;
+	private final KafkaProtobufSerde<Price> priceSerde;
+	private final KafkaProtobufSerde<Product> productSerde;
 
 	@Test
 	void integrationTest() throws ExecutionException, InterruptedException {
@@ -90,7 +72,7 @@ public class AppTests {
 		var productConsumer = createConsumer(PRODUCTS_TOPIC, new StringDeserializer(), productSerde.deserializer());
 
 		// Send a price
-		var price = PriceProto.newBuilder()
+		var price = Price.newBuilder()
 				.setOfferId("O1S1P1")
 				.setProductId("P1")
 				.setSkuId("S1P1")
@@ -100,7 +82,7 @@ public class AppTests {
 		assertIncompleteProductNotInKafka(productConsumer);
 
 		// Send offer details
-		var offerDetails = OfferDetailsProto.newBuilder()
+		var offerDetails = OfferDetails.newBuilder()
 				.setOfferId("O1S1P1")
 				.setProductId("P1")
 				.setSkuId("S1P1")
@@ -111,7 +93,7 @@ public class AppTests {
 		assertIncompleteProductNotInKafka(productConsumer);
 
 		// Send sku details
-		var skuDetails = SkuDetailsProto.newBuilder()
+		var skuDetails = SkuDetails.newBuilder()
 				.setSkuId("S1P1")
 				.setProductId("P1")
 				.setName("Blue wonderful thing")
@@ -121,7 +103,7 @@ public class AppTests {
 		assertIncompleteProductNotInKafka(productConsumer);
 
 		// Send product details
-		var productDetails = ProductDetailsProto.newBuilder()
+		var productDetails = ProductDetails.newBuilder()
 				.setName("Wonderful thing")
 				.setDescription("That's a wonderful thing, trust me...")
 				.setBrand("ShadyGuys")
@@ -131,16 +113,16 @@ public class AppTests {
 		// Read resulting product
 		var product = KafkaTestUtils.getSingleRecord(productConsumer, PRODUCTS_TOPIC);
 
-		var expectedProduct = ProductProto.newBuilder()
+		var expectedProduct = Product.newBuilder()
 				.setId("P1")
 				.setName("Wonderful thing")
 				.setDescription("That's a wonderful thing, trust me...")
 				.setBrand("ShadyGuys")
-				.addSkus(SkuProto.newBuilder()
+				.addSkus(Sku.newBuilder()
 						.setId("S1P1")
 						.setName("Blue wonderful thing")
 						.setDescription("That's a wonderful thing, trust me..., and this one is blue !")
-						.addOffers(OfferProto.newBuilder()
+						.addOffers(Offer.newBuilder()
 								.setId("O1S1P1")
 								.setName("Refurbished blue wonderful thing")
 								.setDescription("That's a wonderful thing, trust me..., and this one is blue ! It should work too.")
@@ -174,7 +156,7 @@ public class AppTests {
 		return consumer;
 	}
 
-	private static void assertIncompleteProductNotInKafka(Consumer<String, ProductProto> productConsumer) {
+	private static void assertIncompleteProductNotInKafka(Consumer<String, Product> productConsumer) {
 		assertThrows(
 				IllegalStateException.class,
 				() -> KafkaTestUtils.getSingleRecord(productConsumer, PRODUCTS_TOPIC, Duration.ofSeconds(5).toMillis()),

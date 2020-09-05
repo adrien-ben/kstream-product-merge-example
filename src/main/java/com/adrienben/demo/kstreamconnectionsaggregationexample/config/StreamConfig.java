@@ -1,20 +1,14 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
-import com.adrienben.demo.domain.in.OfferDetailsProto;
-import com.adrienben.demo.domain.in.PriceProto;
-import com.adrienben.demo.domain.in.ProductDetailsProto;
-import com.adrienben.demo.domain.in.SkuDetailsProto;
-import com.adrienben.demo.domain.out.ProductProto;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.OfferDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.Price;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.ProductDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.in.SkuDetails;
-import com.adrienben.demo.kstreamconnectionsaggregationexample.domain.out.Product;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.adrienben.demo.domain.in.OfferDetails;
+import com.adrienben.demo.domain.in.Price;
+import com.adrienben.demo.domain.in.ProductDetails;
+import com.adrienben.demo.domain.in.SkuDetails;
+import com.adrienben.demo.domain.out.Product;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.service.ProductService;
 import io.confluent.kafka.streams.serdes.protobuf.KafkaProtobufSerde;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -27,8 +21,6 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
 @Slf4j
 @Configuration
@@ -51,26 +43,17 @@ public class StreamConfig {
 	// Output topics
 	public static final String PRODUCTS_TOPIC = "products";
 
-	private final KafkaProtobufSerde<ProductDetailsProto> productDetailsProtoSerde;
-	private final KafkaProtobufSerde<SkuDetailsProto> skuDetailsProtoSerde;
-	private final KafkaProtobufSerde<OfferDetailsProto> offerDetailsProtoSerde;
-	private final KafkaProtobufSerde<PriceProto> priceProtoSerde;
-	private final KafkaProtobufSerde<ProductProto> productProtoSerde;
-	private final ObjectMapper mapper;
-
 	@Bean
-	public KStream<String, ProductProto> kStream(StreamsBuilder streamBuilder) {
-		// First we define the various serialization/deserialization objects we will need
+	public KStream<String, Product> kStream(
+			StreamsBuilder streamBuilder,
+			KafkaProtobufSerde<ProductDetails> productDetailsSerde,
+			KafkaProtobufSerde<SkuDetails> skuDetailsSerde,
+			KafkaProtobufSerde<OfferDetails> offerDetailsSerde,
+			KafkaProtobufSerde<Price> priceSerde,
+			KafkaProtobufSerde<Product> productSerde,
+			ProductService productService
+	) {
 		var stringSerde = Serdes.String();
-		var skuDetailsJsonSerde = jsonSerde(SkuDetails.class);
-		var offerDetailsJsonSerde = jsonSerde(OfferDetails.class);
-		var priceJsonSerde = jsonSerde(Price.class);
-		var productJsonSerde = jsonSerde(Product.class);
-		var productDetailsProtoConsumed = Consumed.with(stringSerde, productDetailsProtoSerde);
-		var priceProtoConsumed = Consumed.with(stringSerde, priceProtoSerde);
-		var skuDetailsProtoConsumed = Consumed.with(stringSerde, skuDetailsProtoSerde);
-		var offerDetailsProtoConsumed = Consumed.with(stringSerde, offerDetailsProtoSerde);
-		var productProtoProduced = Produced.with(stringSerde, productProtoSerde);
 
 		// Group prices
 		// - We first stream the prices
@@ -78,42 +61,38 @@ public class StreamConfig {
 		// - Before we can join though, we need to re-repartition the prices to make sure price and product
 		// with the same key end up in the same partitions.
 		// - We can then group the prices by key.
-		var groupedPrices = streamBuilder.stream(PRICES_TOPIC, priceProtoConsumed)
+		var groupedPrices = streamBuilder
+				.stream(PRICES_TOPIC, Consumed.with(stringSerde, priceSerde))
 				.selectKey((key, price) -> price.getProductId())
-				.mapValues(Price::fromProto)
 				.repartition(Repartitioned.<String, Price>as(PRICES_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(priceJsonSerde))
+						.withValueSerde(priceSerde))
 				.groupByKey();
 
 		// Group offer details
 		// Same principe as the price grouping
-		var groupedOfferDetails = streamBuilder.stream(OFFER_DETAILS_TOPIC, offerDetailsProtoConsumed)
+		var groupedOfferDetails = streamBuilder
+				.stream(OFFER_DETAILS_TOPIC, Consumed.with(stringSerde, offerDetailsSerde))
 				.selectKey((key, offerDetails) -> offerDetails.getProductId())
-				.mapValues(OfferDetails::fromProto)
 				.repartition(Repartitioned.<String, OfferDetails>as(OFFER_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(offerDetailsJsonSerde))
+						.withValueSerde(offerDetailsSerde))
 				.groupByKey();
 
 		// Group sku details
 		// Same principe as the price grouping
-		var groupedSkuDetails = streamBuilder.stream(SKU_DETAILS_TOPIC, skuDetailsProtoConsumed)
+		var groupedSkuDetails = streamBuilder
+				.stream(SKU_DETAILS_TOPIC, Consumed.with(stringSerde, skuDetailsSerde))
 				.selectKey((key, skuDetails) -> skuDetails.getProductId())
-				.mapValues(SkuDetails::fromProto)
 				.repartition(Repartitioned.<String, SkuDetails>as(SKU_DETAILS_BY_PRODUCT_ID_REKEY_TOPIC)
 						.withKeySerde(stringSerde)
-						.withValueSerde(skuDetailsJsonSerde))
+						.withValueSerde(skuDetailsSerde))
 				.groupByKey();
 
 		// Group sku details
 		// Same principe as the price grouping
-		var groupedProductDetails = streamBuilder.stream(PRODUCT_DETAILS_TOPIC, productDetailsProtoConsumed)
-				.mapValues(ProductDetails::fromProto)
-				.mapValues((id, productDetails) -> {
-					productDetails.setId(id);
-					return productDetails;
-				})
+		var groupedProductDetails = streamBuilder
+				.stream(PRODUCT_DETAILS_TOPIC, Consumed.with(stringSerde, productDetailsSerde))
 				.groupByKey();
 
 		// Now our parts are ready to be merged using the co-group operation.
@@ -121,26 +100,18 @@ public class StreamConfig {
 		// We also define how to create the initial Product.
 		// Finally we check that our product is complete before we send it to the output topic.
 		var products = groupedProductDetails
-				.<Product>cogroup((key, productDetails, product) -> product.mergeProductDetails(productDetails))
-				.cogroup(groupedSkuDetails, (key, skuDetails, product) -> product.mergeSkuDetails(skuDetails))
-				.cogroup(groupedOfferDetails, (key, offerDetails, product) -> product.mergeOfferDetails(offerDetails))
-				.cogroup(groupedPrices, (key, price, product) -> product.mergePrice(price))
-				.aggregate(Product::new,
-						Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as(PRODUCT_STORE_NAME)
-								.withKeySerde(stringSerde)
-								.withValueSerde(productJsonSerde))
+				.cogroup(productService::mergeProductDetails)
+				.cogroup(groupedSkuDetails, productService::mergeSkuDetails)
+				.cogroup(groupedOfferDetails, productService::mergeOfferDetails)
+				.cogroup(groupedPrices, productService::mergePrice)
+				.aggregate(Product::getDefaultInstance, Materialized.<String, Product, KeyValueStore<Bytes, byte[]>>as(PRODUCT_STORE_NAME)
+						.withKeySerde(stringSerde)
+						.withValueSerde(productSerde))
 				.toStream()
-				.filter((key, product) -> product.isComplete())
-				.mapValues(Product::toProto);
+				.filter(productService::isProductComplete);
 
-		products.to(PRODUCTS_TOPIC, productProtoProduced);
+		products.to(PRODUCTS_TOPIC, Produced.with(stringSerde, productSerde));
 
 		return products;
-	}
-
-	private <T> Serde<T> jsonSerde(Class<T> targetClass) {
-		return Serdes.serdeFrom(
-				new JsonSerializer<>(mapper),
-				new JsonDeserializer<>(targetClass, mapper, false));
 	}
 }

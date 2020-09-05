@@ -1,17 +1,13 @@
 package com.adrienben.demo.kstreamconnectionsaggregationexample.config;
 
-import com.adrienben.demo.domain.in.OfferDetailsProto;
-import com.adrienben.demo.domain.in.PriceProto;
-import com.adrienben.demo.domain.in.ProductDetailsProto;
-import com.adrienben.demo.domain.in.SkuDetailsProto;
-import com.adrienben.demo.domain.out.OfferProto;
-import com.adrienben.demo.domain.out.ProductProto;
-import com.adrienben.demo.domain.out.SkuProto;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
-import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchema;
+import com.adrienben.demo.domain.in.OfferDetails;
+import com.adrienben.demo.domain.in.Price;
+import com.adrienben.demo.domain.in.ProductDetails;
+import com.adrienben.demo.domain.in.SkuDetails;
+import com.adrienben.demo.domain.out.Offer;
+import com.adrienben.demo.domain.out.Product;
+import com.adrienben.demo.domain.out.Sku;
+import com.adrienben.demo.kstreamconnectionsaggregationexample.service.ProductService;
 import io.confluent.kafka.streams.serdes.protobuf.KafkaProtobufSerde;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +23,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.TestConstructor;
 
-import java.io.IOException;
 import java.util.Properties;
 
 import static com.adrienben.demo.kstreamconnectionsaggregationexample.config.StreamConfig.OFFER_DETAILS_TOPIC;
@@ -47,35 +39,20 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @Slf4j
 @RequiredArgsConstructor
 @TestConstructor(autowireMode = TestConstructor.AutowireMode.ALL)
-@SpringBootTest(classes = { JacksonAutoConfiguration.class, ProtobufSerdeConfig.class, StreamConfigTest.SchemaRegistryConfiguration.class })
+@SpringBootTest(classes = { ProtobufSerdeConfig.class, SchemaRegistryConfiguration.class })
 class StreamConfigTest {
 
-	@TestConfiguration
-	static class SchemaRegistryConfiguration {
-		@Bean
-		public SchemaRegistryClient schemaRegistryClient() throws IOException, RestClientException {
-			var client = new MockSchemaRegistryClient();
-			client.register(PRODUCT_DETAILS_TOPIC + "-value", new ProtobufSchema(ProductDetailsProto.getDescriptor()));
-			client.register(SKU_DETAILS_TOPIC + "-value", new ProtobufSchema(SkuDetailsProto.getDescriptor()));
-			client.register(OFFER_DETAILS_TOPIC + "-value", new ProtobufSchema(OfferDetailsProto.getDescriptor()));
-			client.register(PRICES_TOPIC + "-value", new ProtobufSchema(PriceProto.getDescriptor()));
-			client.register(PRODUCTS_TOPIC + "-value", new ProtobufSchema(ProductProto.getDescriptor()));
-			return client;
-		}
-	}
+	private final KafkaProtobufSerde<ProductDetails> productDetailsSerde;
+	private final KafkaProtobufSerde<SkuDetails> skuDetailsSerde;
+	private final KafkaProtobufSerde<OfferDetails> offerDetailsSerde;
+	private final KafkaProtobufSerde<Price> priceSerde;
+	private final KafkaProtobufSerde<Product> productSerde;
 
-	private final KafkaProtobufSerde<ProductDetailsProto> productDetailsProtoSerde;
-	private final KafkaProtobufSerde<SkuDetailsProto> skuDetailsProtoSerde;
-	private final KafkaProtobufSerde<OfferDetailsProto> offerDetailsProtoSerde;
-	private final KafkaProtobufSerde<PriceProto> priceProtoSerde;
-	private final KafkaProtobufSerde<ProductProto> productProtoSerde;
-	private final ObjectMapper mapper;
-
-	private TestInputTopic<String, ProductDetailsProto> productDetailsInputTopic;
-	private TestInputTopic<byte[], SkuDetailsProto> skuDetailsInputTopic;
-	private TestInputTopic<byte[], OfferDetailsProto> offerDetailsInputTopic;
-	private TestInputTopic<byte[], PriceProto> priceInputTopic;
-	private TestOutputTopic<String, ProductProto> productOutputTopic;
+	private TestInputTopic<String, ProductDetails> productDetailsInputTopic;
+	private TestInputTopic<byte[], SkuDetails> skuDetailsInputTopic;
+	private TestInputTopic<byte[], OfferDetails> offerDetailsInputTopic;
+	private TestInputTopic<byte[], Price> priceInputTopic;
+	private TestOutputTopic<String, Product> productOutputTopic;
 	private TopologyTestDriver topologyTestDriver;
 
 	@BeforeEach
@@ -83,28 +60,28 @@ class StreamConfigTest {
 		topologyTestDriver = buildTopologyTestDriver();
 
 		productDetailsInputTopic = topologyTestDriver
-				.createInputTopic(PRODUCT_DETAILS_TOPIC, new StringSerializer(), productDetailsProtoSerde.serializer());
+				.createInputTopic(PRODUCT_DETAILS_TOPIC, new StringSerializer(), productDetailsSerde.serializer());
 		skuDetailsInputTopic = topologyTestDriver
-				.createInputTopic(SKU_DETAILS_TOPIC, new ByteArraySerializer(), skuDetailsProtoSerde.serializer());
+				.createInputTopic(SKU_DETAILS_TOPIC, new ByteArraySerializer(), skuDetailsSerde.serializer());
 		offerDetailsInputTopic = topologyTestDriver
-				.createInputTopic(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), offerDetailsProtoSerde.serializer());
+				.createInputTopic(OFFER_DETAILS_TOPIC, new ByteArraySerializer(), offerDetailsSerde.serializer());
 		priceInputTopic = topologyTestDriver
-				.createInputTopic(PRICES_TOPIC, new ByteArraySerializer(), priceProtoSerde.serializer());
+				.createInputTopic(PRICES_TOPIC, new ByteArraySerializer(), priceSerde.serializer());
 		productOutputTopic = topologyTestDriver
-				.createOutputTopic(PRODUCTS_TOPIC, new StringDeserializer(), productProtoSerde.deserializer());
+				.createOutputTopic(PRODUCTS_TOPIC, new StringDeserializer(), productSerde.deserializer());
 	}
 
 	private TopologyTestDriver buildTopologyTestDriver() {
-		var streamConfig = new StreamConfig(
-				productDetailsProtoSerde,
-				skuDetailsProtoSerde,
-				offerDetailsProtoSerde,
-				priceProtoSerde,
-				productProtoSerde,
-				mapper);
-
+		var streamConfig = new StreamConfig();
 		var streamsBuilder = new StreamsBuilder();
-		streamConfig.kStream(streamsBuilder);
+
+		streamConfig.kStream(streamsBuilder,
+				productDetailsSerde,
+				skuDetailsSerde,
+				offerDetailsSerde,
+				priceSerde,
+				productSerde,
+				new ProductService());
 		var topology = streamsBuilder.build();
 
 		var properties = new Properties();
@@ -128,7 +105,7 @@ class StreamConfigTest {
 	void productCompleteness() {
 
 		// Send a price
-		var price = PriceProto.newBuilder()
+		var price = Price.newBuilder()
 				.setOfferId("O1S1P1")
 				.setProductId("P1")
 				.setSkuId("S1P1")
@@ -138,7 +115,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send offer details
-		var offerDetails = OfferDetailsProto.newBuilder()
+		var offerDetails = OfferDetails.newBuilder()
 				.setOfferId("O1S1P1")
 				.setProductId("P1")
 				.setSkuId("S1P1")
@@ -149,7 +126,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send sku details
-		var skuDetails = SkuDetailsProto.newBuilder()
+		var skuDetails = SkuDetails.newBuilder()
 				.setSkuId("S1P1")
 				.setProductId("P1")
 				.setName("Blue wonderful thing")
@@ -159,7 +136,7 @@ class StreamConfigTest {
 		assertIncompleteProductNotInKafka();
 
 		// Send product details
-		var productDetails = ProductDetailsProto.newBuilder()
+		var productDetails = ProductDetails.newBuilder()
 				.setName("Wonderful thing")
 				.setDescription("That's a wonderful thing, trust me...")
 				.setBrand("ShadyGuys")
@@ -169,16 +146,16 @@ class StreamConfigTest {
 		// Read resulting product
 		var productKeyValue = productOutputTopic.readKeyValue();
 
-		var expectedProduct = ProductProto.newBuilder()
+		var expectedProduct = Product.newBuilder()
 				.setId("P1")
 				.setName("Wonderful thing")
 				.setDescription("That's a wonderful thing, trust me...")
 				.setBrand("ShadyGuys")
-				.addSkus(SkuProto.newBuilder()
+				.addSkus(Sku.newBuilder()
 						.setId("S1P1")
 						.setName("Blue wonderful thing")
 						.setDescription("That's a wonderful thing, trust me..., and this one is blue !")
-						.addOffers(OfferProto.newBuilder()
+						.addOffers(Offer.newBuilder()
 								.setId("O1S1P1")
 								.setName("Refurbished blue wonderful thing")
 								.setDescription("That's a wonderful thing, trust me..., and this one is blue ! It should work too.")

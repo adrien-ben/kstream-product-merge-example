@@ -4,7 +4,7 @@ package com.adrienben.demo.domain.in;
 
 option java_multiple_files = true;
 
-message SkuDetailsProto {
+message SkuDetails {
   string skuId = 1;
   string productId = 2;
   string name = 3;
