@@ -17,7 +17,6 @@ We consume the product part from 4 different topics:
 
 ```json
 {
-  "id": "P1",
   "name": "Wonderful thing",
   "description": "That's a wonderful thing, trust me...",
   "brand": "ShadyGuys"
