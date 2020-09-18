@@ -21,8 +21,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.kafka.support.serializer.JsonSerde;
 
 @Slf4j
 @Configuration
@@ -124,8 +123,6 @@ public class StreamConfig {
 	}
 
 	private <T> Serde<T> jsonSerde(Class<T> targetClass) {
-		return Serdes.serdeFrom(
-				new JsonSerializer<>(mapper),
-				new JsonDeserializer<>(targetClass, mapper, false));
+		return new JsonSerde<>(targetClass, mapper).noTypeInfo().ignoreTypeHeaders();
 	}
 }
