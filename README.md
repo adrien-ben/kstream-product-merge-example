@@ -123,3 +123,5 @@ that ease the interaction with the kafka broker and that you can access at local
 ```sh
 docker-compose up -d
 ```
+
+![Topology](kafkahq.png)
