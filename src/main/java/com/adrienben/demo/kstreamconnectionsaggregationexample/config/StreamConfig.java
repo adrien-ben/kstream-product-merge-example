@@ -12,17 +12,14 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
-import org.apache.kafka.streams.kstream.Repartitioned;
+import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+
 
 @Slf4j
 @Configuration
@@ -93,7 +90,7 @@ public class StreamConfig {
 						.withValueSerde(skuDetailsSerde))
 				.groupByKey();
 
-		// Group sku details
+		// Group product details
 		// Same principe as the price grouping
 		var groupedProductDetails = streamBuilder.stream(PRODUCT_DETAILS_TOPIC, productDetailsConsumed)
 				.mapValues((id, productDetails) -> {
@@ -105,7 +102,7 @@ public class StreamConfig {
 		// Now our parts are ready to be merged using the co-group operation.
 		// For each of our grouped stream we define how it's gonna be merged in the final Product.
 		// We also define how to create the initial Product.
-		// Finally we check that our product is complete before we send it to the output topic.
+		// Finally, we check that our product is complete before we send it to the output topic.
 		var products = groupedProductDetails
 				.<Product>cogroup((key, productDetails, product) -> product.mergeProductDetails(productDetails))
 				.cogroup(groupedSkuDetails, (key, skuDetails, product) -> product.mergeSkuDetails(skuDetails))

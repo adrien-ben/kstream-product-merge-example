@@ -3,6 +3,7 @@ spring:
     name: kstream-product-merge-example
 
   kafka:
+    bootstrap-servers: localhost:29092
     streams:
       state-dir: ./target/kstream-statestore
       properties:
